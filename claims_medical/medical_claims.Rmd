@@ -1,0 +1,106 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+
+
+## Including Plots
+
+You can also embed plots, for example:
+
+
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{r}
+claims=read.csv("ClaimsData.csv")
+str(claims)
+```
+```{r}
+table(claims$bucket2009)/(nrow(claims))
+```
+```{r}
+library(caTools)
+set.seed(88)
+split=sample.split(claims$bucket2009,SplitRatio = 0.6)
+train=subset(claims,split==TRUE)
+test=subset(claims,split==FALSE)
+```
+```{r}
+sum(claims$age)/nrow(claims)
+```
+
+```{r}
+x=subset(train,train$diabetes==1)
+nrow(x)/nrow(train)
+```
+## baseline model
+```{r}
+table(test$bucket2009,test$bucket2008)
+```
+## calculating accuracy
+```{r}
+(110138+10721+2774+1539+104)/(nrow(test))
+```
+```{r}
+# Penalty Matrix
+PenaltyMatrix = matrix(c(0,1,2,3,4,2,0,1,2,3,4,2,0,1,2,6,4,2,0,1,8,6,4,2,0), byrow=TRUE, nrow=5)
+PenaltyMatrix
+```
+```{r}
+# Penalty Error of Baseline Method
+as.matrix(table(test$bucket2009, test$bucket2008))*PenaltyMatrix
+
+sum(as.matrix(table(test$bucket2009, test$bucket2008))*PenaltyMatrix)/nrow(test)
+
+```
+```{r}
+library(rpart)
+library(rpart.plot)
+
+# CART model
+ClaimsTree = rpart(bucket2009 ~ age + alzheimers + arthritis + cancer + copd + depression + diabetes + heart.failure + ihd + kidney + osteoporosis + stroke + bucket2008 + reimbursement2008, data=train, method="class", cp=0.00005)
+
+prp(ClaimsTree)
+
+```
+```{r}
+# Make predictions
+PredictTest = predict(ClaimsTree, newdata = test, type = "class")
+
+table(test$bucket2009, PredictTest)
+```
+```{r}
+(114141 + 16102 + 118 + 201 + 0)/nrow(test)
+```
+```{r}
+# Penalty Error
+as.matrix(table(test$bucket2009, PredictTest))*PenaltyMatrix
+
+sum(as.matrix(table(test$bucket2009, PredictTest))*PenaltyMatrix)/nrow(test)
+```
+```{r}
+# New CART model with loss matrix
+ClaimsTree = rpart(bucket2009 ~ age + alzheimers + arthritis + cancer + copd + depression + diabetes + heart.failure + ihd + kidney + osteoporosis + stroke + bucket2008 + reimbursement2008, data=train, method="class", cp=0.00005, parms=list(loss=PenaltyMatrix))
+
+# Redo predictions and penalty error
+PredictTest = predict(ClaimsTree, newdata = test, type = "class")
+
+table(test$bucket2009, PredictTest)
+```
+```{r}
+(94310 + 18942 + 4692 + 636 + 2)/nrow(test)
+
+sum(as.matrix(table(test$bucket2009, PredictTest))*PenaltyMatrix)/nrow(test)
+```
+##we observe our accuracy has decreased but also the penalty error has reduced
