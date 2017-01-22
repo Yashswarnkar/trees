@@ -1,0 +1,92 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+
+
+## Including Plots
+
+You can also embed plots, for example:
+
+
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{r}
+letters=read.csv("letters_ABPR.csv")
+letters$isB=as.factor(letters$letter=="B")
+```
+
+```{r}
+
+library(caTools)
+set.seed(1000)
+split=sample.split(letters$isB,SplitRatio = 0.50)
+train=subset(letters,split==TRUE)
+test=subset(letters,split==FALSE)
+table(train$isB)
+```
+##false is much more common
+##testing baseline model of predicting not B
+```{r}
+table(test$isB)
+```
+```{r}
+(1175)/(1175+383)
+```
+```{r}
+library(rpart)
+library(rpart.plot)
+CARTb = rpart(isB ~ . - letter, data=train, method="class")
+predictions = predict(CARTb, newdata=test, type="class")
+table(test$isB, predictions)
+```
+##building random forest model
+```{r}
+library(randomForest)
+set.seed(1000)
+RFb = randomForest(isB ~ . - letter, data=train) 
+pred=predict(RFb,newdata=test)
+table(test$isB,pred)
+```
+```{r}
+library(caTools)
+letters$letter = as.factor( letters$letter ) 
+set.seed(2000)
+split=sample.split(letters$letter,SplitRatio = 0.50)
+train=subset(letters,split==TRUE)
+test=subset(letters,split==FALSE)
+table(letters$letter)
+```
+```{r}
+library(rpart)
+library(rpart.plot)
+CARTletter = rpart(letter ~ . - isB, data=train, method="class")
+predictLetter = predict(CARTletter, newdata=test, type="class")
+table(test$letter,predictLetter)
+```
+test accuracy of the model
+```{r}
+(348+318+363+340)/(nrow(test))
+```
+```{r}
+library(randomForest)
+set.seed(1000)
+RFb2 = randomForest(letter ~ . - isB, data=train) 
+pred1=predict(RFb2,newdata=test)
+table(test$letter,pred1)
+```
+```{r}
+(390+380+393+364)/nrow(test)
+```
+
