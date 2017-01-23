@@ -1,0 +1,95 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+
+
+## Including Plots
+
+You can also embed plots, for example:
+
+
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{r}
+census=read.csv("census.csv")
+str(census)
+summary(census)
+```
+##using logistic regression to build a model
+```{r}
+set.seed(2000)
+library(caTools)
+split=sample.split(census$over50k,SplitRatio = 0.60)
+train=subset(census,split==TRUE)
+test=subset(census,split==FALSE)
+censusglm = glm( over50k ~ . , family="binomial", data = train)
+summary(censusglm)
+```
+```{r}
+pred=predict(censusglm,newdata = test,type="response")
+table(test$over50k,pred>=0.5)
+```
+```{r}
+(9051+1888)/(nrow(test))
+```
+##baseline model 
+```{r}
+table(train$over50k)
+table(test$over50k)
+```
+```{r}
+9713/(nrow(test))
+```
+## building a cart model
+```{r}
+library(rpart)
+library(rpart.plot)
+CARTtree=rpart(over50k~.,data=train,method="class")
+prp(CARTtree)
+```
+```{r}
+predCARTtree=predict(CARTtree,newdata=test,type="class")
+table(test$over50k,predCARTtree)
+```
+```{r}
+(9243+1596)/(nrow(test))
+```
+## building a random forest with small training data
+```{r}
+set.seed(1)
+train=subset(census,split==TRUE)
+test=subset(census,split==FALSE)
+trainSmall = train[sample(nrow(train), 2000), ]
+library(randomForest)
+set.seed(1)
+RandomF1=randomForest(over50k~.,data=trainSmall)
+pred1=predict(RandomF1,newdata=test)
+table(test$over50k,pred1)
+```
+```{r}
+(12067+1005)/(nrow(test))
+```
+```{r}
+vu = varUsed(RandomF1, count=TRUE)
+
+vusorted = sort(vu, decreasing = FALSE, index.return = TRUE)
+
+dotchart(vusorted$x, names(RandomF1$forest$xlevels[vusorted$ix]))
+```
+```{r}
+library(randomForest)
+varImpPlot(RandomF1)
+```
+
